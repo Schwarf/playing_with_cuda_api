@@ -1,33 +1,11 @@
-/**
- * Copyright 1993-2015 NVIDIA Corporation.  All rights reserved.
- *
- * Please refer to the NVIDIA end user license agreement (EULA) associated
- * with this source code for terms and conditions that govern your use of
- * this software. Any use, reproduction, disclosure, or distribution of
- * this software and related documentation outside the terms of the EULA
- * is strictly prohibited.
- *
- */
 
-/**
- * Vector addition: C = A + B.
- *
- * This sample is a very basic sample that implements element by element
- * vector addition. It is the same as the sample illustrating Chapter 2
- * of the programming guide with some additions like error checking.
- */
-
-#include <stdio.h>
-
+#include <cstdio>
+#include <iostream>
+#include <unordered_set>
+#include <exception>
 // For the CUDA runtime routines (prefixed with "cuda_")
 #include <cuda_runtime.h>
 
-/**
- * CUDA Kernel Device code
- *
- * Computes the vector addition of A and B into C. The 3 vectors have the same
- * number of elements numElements.
- */
 
 template <typename T>
 __global__ void
@@ -41,28 +19,80 @@ vectorAdd(const T *A, const T *B, T *C, int numElements)
 	}
 }
 
-template<typename T>
-T * allocate_host_memory(size_t number_of_elements)
-{
-	T * memory = new T[number_of_elements];
-	return memory;
-}
 
-
-template<typename T>
-T * allocate_device_memory(size_t number_of_elements)
+template <class T> class MemoryTracking
 {
-	cudaError_t error = cudaSuccess;
-	auto size = number_of_elements*sizeof(T);
-	T * device_memory = nullptr;
-	error = cudaMalloc((void **)&device_memory, size);
-	if (error != cudaSuccess)
+public:
+	MemoryTracking() =default;
+
+	T * allocate_host_memory(size_t number_of_elements)
 	{
-		fprintf(stderr, "Failed to allocate device memory (error code %s)!\n", cudaGetErrorString(error));
-		exit(EXIT_FAILURE);
+		T * host_memory = new T[number_of_elements];
+
+		host_memory_hashes_.insert(PointerHash<T>()(host_memory));
+		return host_memory;
 	}
-	return device_memory;
-}
+
+	T * allocate_device_memory(size_t number_of_elements)
+	{
+		cudaError_t error = cudaSuccess;
+		auto size = number_of_elements*sizeof(T);
+		T * device_memory = nullptr;
+		error = cudaMalloc((void **)&device_memory, size);
+		if (error != cudaSuccess)
+		{
+			fprintf(stderr, "Failed to allocate device memory (error code %s)!\n", cudaGetErrorString(error));
+			exit(EXIT_FAILURE);
+		}
+		device_memory_hashes_.insert(PointerHash<T>()(device_memory));
+		return device_memory;
+	}
+
+	void free_device_memory(T * device_memory)
+	{
+
+		if(device_memory_hashes_.find(PointerHash<T>()(device_memory)) == device_memory_hashes_.end())
+		{
+			std::cout << "Device memory is not registered." << std::endl;
+		}
+		cudaError_t error = cudaSuccess;
+		error = cudaFree(device_memory);
+		if (error != cudaSuccess)
+		{
+			fprintf(stderr, "Failed to free device memory (error code %s)!\n", cudaGetErrorString(error));
+			exit(EXIT_FAILURE);
+		}
+		device_memory_hashes_.erase(PointerHash<T>()(device_memory));
+	}
+
+	void free_host_memory(T * host_memory)
+	{
+		if(host_memory_hashes_.find(PointerHash<T>()(host_memory)) == host_memory_hashes_.end())
+		{
+			std::cout << "Host memory is not registered." << std::endl;
+		}
+
+		delete [] host_memory;
+		host_memory_hashes_.erase(PointerHash<T>()(host_memory));
+
+	}
+
+private:
+	std::unordered_set<size_t> device_memory_hashes_;
+	std::unordered_set<size_t> host_memory_hashes_;
+	template <typename U>
+	struct PointerHash
+	{
+		size_t operator()(const U * value) const
+		{
+			static const auto shift = (size_t)log2(1+ sizeof(U));
+			return (size_t) (value) >> shift;
+		}
+	};
+
+};
+
+
 
 template <typename T>
 void copy_host_array_to_device_array(T * host_memory, T* device_memory, size_t number_of_elements)
@@ -70,72 +100,80 @@ void copy_host_array_to_device_array(T * host_memory, T* device_memory, size_t n
 	cudaError_t error = cudaSuccess;
 	auto size = number_of_elements*sizeof(T);
 	error = cudaMemcpy(device_memory, host_memory, size, cudaMemcpyHostToDevice);
+	if (error != cudaSuccess)
+	{
+		fprintf(stderr, "Failed to copy from host to device (error code %s)!\n", cudaGetErrorString(error));
+		exit(EXIT_FAILURE);
+	}
+}
+
+template <typename T>
+void copy_device_array_to_host_array(T * host_memory, T* device_memory, size_t number_of_elements)
+{
+	cudaError_t error = cudaSuccess;
+	auto size = number_of_elements*sizeof(T);
+	error = cudaMemcpy(host_memory, device_memory, size, cudaMemcpyDeviceToHost);
+	if (error != cudaSuccess)
+	{
+		fprintf(stderr, "Failed to copy from device to host (error code %s)!\n", cudaGetErrorString(error));
+		exit(EXIT_FAILURE);
+	}
 
 }
 
 
-/**
- * Host main routine
- */
-int main(void)
+
+
+int main()
 {
 	// Error code to check return values for CUDA calls
-	cudaError_t err = cudaSuccess;
+	cudaError_t error = cudaSuccess;
 
 	// Print the vector length to be used, and compute its size
-	size_t numElements = 50000;
-	auto size = numElements*sizeof(float);
-	printf("[Vector addition of %d elements]\n", numElements);
+	size_t number_of_elements = 50000;
+	std::cout << "Vector addition of "<< number_of_elements << "elements \n";
 
 	// Allocate the host vectors
-	auto array_A = allocate_host_memory<float>(numElements);
-	auto array_B = allocate_host_memory<float>(numElements);
-	auto array_C = allocate_host_memory<float>(numElements);
+	auto tracker = MemoryTracking<float>();
+	auto array_A = tracker.allocate_host_memory(number_of_elements);
+	auto array_B = tracker.allocate_host_memory(number_of_elements);
+	auto array_C = tracker.allocate_host_memory(number_of_elements);
 
 	// Initialize the host input vectors
-	for (int i = 0; i < numElements; ++i)
+	for (int i = 0; i < number_of_elements; ++i)
 	{
 		array_A[i] = rand()/(float)RAND_MAX;
 		array_B[i] = rand()/(float)RAND_MAX;
 	}
 
-	auto device_array_A = allocate_device_memory<float>(numElements);
-	auto device_array_B = allocate_device_memory<float>(numElements);
-	auto device_array_C = allocate_device_memory<float>(numElements);
+	auto device_array_A = tracker.allocate_device_memory(number_of_elements);
+	auto device_array_B = tracker.allocate_device_memory(number_of_elements);
+	auto device_array_C = tracker.allocate_device_memory(number_of_elements);
 
 
 	printf("Copy input data from the host memory to the CUDA device\n");
-	copy_host_array_to_device_array<float>(array_A, device_array_A, numElements);
-	copy_host_array_to_device_array<float>(array_B, device_array_B, numElements);
-	copy_host_array_to_device_array<float>(array_C, device_array_C, numElements);
+	copy_host_array_to_device_array<float>(array_A, device_array_A, number_of_elements);
+	copy_host_array_to_device_array<float>(array_B, device_array_B, number_of_elements);
+	copy_host_array_to_device_array<float>(array_C, device_array_C, number_of_elements);
 
 
 	// Launch the Vector Add CUDA Kernel
 	int threadsPerBlock = 256;
-	int blocksPerGrid =(numElements + threadsPerBlock - 1) / threadsPerBlock;
+	int blocksPerGrid =(number_of_elements + threadsPerBlock - 1) / threadsPerBlock;
 	printf("CUDA kernel launch with %d blocks of %d threads\n", blocksPerGrid, threadsPerBlock);
-	vectorAdd<float><<<blocksPerGrid, threadsPerBlock>>>(device_array_A, device_array_B, device_array_C, numElements);
-	err = cudaGetLastError();
+	vectorAdd<float><<<blocksPerGrid, threadsPerBlock>>>(device_array_A, device_array_B, device_array_C, number_of_elements);
+	error = cudaGetLastError();
 
-	if (err != cudaSuccess)
+	if (error != cudaSuccess)
 	{
-		fprintf(stderr, "Failed to launch vectorAdd kernel (error code %s)!\n", cudaGetErrorString(err));
+		fprintf(stderr, "Failed to launch vectorAdd kernel (error code %s)!\n", cudaGetErrorString(error));
 		exit(EXIT_FAILURE);
 	}
 
-	// Copy the device result vector in device memory to the host result vector
-	// in host memory.
-	printf("Copy output data from the CUDA device to the host memory\n");
-	err = cudaMemcpy(array_C, device_array_C, size, cudaMemcpyDeviceToHost);
-
-	if (err != cudaSuccess)
-	{
-		fprintf(stderr, "Failed to copy vector C from device to host (error code %s)!\n", cudaGetErrorString(err));
-		exit(EXIT_FAILURE);
-	}
+	copy_device_array_to_host_array<float>(array_C, device_array_C, number_of_elements);
 
 	// Verify that the result vector is correct
-	for (int i = 0; i < numElements; ++i)
+	for (int i = 0; i < number_of_elements; ++i)
 	{
 		if (fabs(array_A[i] + array_B[i] - array_C[i]) > 1e-5)
 		{
@@ -143,40 +181,16 @@ int main(void)
 			exit(EXIT_FAILURE);
 		}
 	}
+	std::cout << "Test PASSED " <<std::endl;
 
-	printf("Test PASSED\n");
+	tracker.free_device_memory(device_array_A);
+	tracker.free_device_memory(device_array_B);
+	tracker.free_device_memory(device_array_C);
 
-	// Free device global memory
-	err = cudaFree(device_array_A);
-
-	if (err != cudaSuccess)
-	{
-		fprintf(stderr, "Failed to free device vector A (error code %s)!\n", cudaGetErrorString(err));
-		exit(EXIT_FAILURE);
-	}
-
-	err = cudaFree(device_array_B);
-
-	if (err != cudaSuccess)
-	{
-		fprintf(stderr, "Failed to free device vector B (error code %s)!\n", cudaGetErrorString(err));
-		exit(EXIT_FAILURE);
-	}
-
-	err = cudaFree(device_array_C);
-
-	if (err != cudaSuccess)
-	{
-		fprintf(stderr, "Failed to free device vector C (error code %s)!\n", cudaGetErrorString(err));
-		exit(EXIT_FAILURE);
-	}
+	tracker.free_host_memory(array_A);
+	tracker.free_host_memory(array_B);
+	tracker.free_host_memory(array_C);
 
 	// Free host memory
-	delete[] array_A;
-	delete[] array_B;
-	delete[] array_C;
-
-
-	printf("Done\n");
 	return 0;
 }
