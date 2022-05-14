@@ -77,6 +77,16 @@ public:
 
 	}
 
+	bool is_device_memory_freed()
+	{
+		return device_memory_hashes_.empty();
+	}
+
+	bool is_host_memory_freed()
+	{
+		return host_memory_hashes_.empty();
+	}
+
 private:
 	std::unordered_set<size_t> device_memory_hashes_;
 	std::unordered_set<size_t> host_memory_hashes_;
@@ -131,7 +141,7 @@ int main()
 
 	// Print the vector length to be used, and compute its size
 	size_t number_of_elements = 50000;
-	std::cout << "Vector addition of "<< number_of_elements << "elements \n";
+	std::cout << "Vector addition of "<< number_of_elements << " elements \n";
 
 	// Allocate the host vectors
 	auto tracker = MemoryTracking<float>();
@@ -182,6 +192,7 @@ int main()
 		}
 	}
 	std::cout << "Test PASSED " <<std::endl;
+
 
 	tracker.free_device_memory(device_array_A);
 	tracker.free_device_memory(device_array_B);
