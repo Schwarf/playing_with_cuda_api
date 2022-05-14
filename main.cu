@@ -1,7 +1,6 @@
 
 #include <cstdio>
 #include <iostream>
-// For the CUDA runtime routines (prefixed with "cuda_")
 #include <cuda_runtime.h>
 #include "helper/memory_tracking.h"
 
@@ -17,34 +16,6 @@ vectorAdd(const T *A, const T *B, T *C, int numElements)
 	}
 }
 
-template <typename T>
-void copy_host_array_to_device_array(T * host_memory, T* device_memory, size_t number_of_elements)
-{
-	cudaError_t error = cudaSuccess;
-	auto size = number_of_elements*sizeof(T);
-	error = cudaMemcpy(device_memory, host_memory, size, cudaMemcpyHostToDevice);
-	if (error != cudaSuccess)
-	{
-		fprintf(stderr, "Failed to copy from host to device (error code %s)!\n", cudaGetErrorString(error));
-		exit(EXIT_FAILURE);
-	}
-}
-
-template <typename T>
-void copy_device_array_to_host_array(T * host_memory, T* device_memory, size_t number_of_elements)
-{
-	cudaError_t error = cudaSuccess;
-	auto size = number_of_elements*sizeof(T);
-	error = cudaMemcpy(host_memory, device_memory, size, cudaMemcpyDeviceToHost);
-	if (error != cudaSuccess)
-	{
-		fprintf(stderr, "Failed to copy from device to host (error code %s)!\n", cudaGetErrorString(error));
-		exit(EXIT_FAILURE);
-	}
-
-}
-
-
 
 
 int main()
@@ -57,7 +28,7 @@ int main()
 	std::cout << "Vector addition of "<< number_of_elements << " elements \n";
 
 	// Allocate the host vectors
-	auto tracker = MemoryTracking<float>();
+	auto tracker = MemoryTracking<int>();
 	auto array_A = tracker.allocate_host_memory(number_of_elements);
 	auto array_B = tracker.allocate_host_memory(number_of_elements);
 	auto array_C = tracker.allocate_host_memory(number_of_elements);
@@ -65,8 +36,8 @@ int main()
 	// Initialize the host input vectors
 	for (int i = 0; i < number_of_elements; ++i)
 	{
-		array_A[i] = rand()/(float)RAND_MAX;
-		array_B[i] = rand()/(float)RAND_MAX;
+		array_A[i] = rand()/(int)RAND_MAX;
+		array_B[i] = rand()/(int)RAND_MAX;
 	}
 
 	auto device_array_A = tracker.allocate_device_memory(number_of_elements);
@@ -75,16 +46,16 @@ int main()
 
 
 	printf("Copy input data from the host memory to the CUDA device\n");
-	copy_host_array_to_device_array<float>(array_A, device_array_A, number_of_elements);
-	copy_host_array_to_device_array<float>(array_B, device_array_B, number_of_elements);
-	copy_host_array_to_device_array<float>(array_C, device_array_C, number_of_elements);
+	tracker.copy_host_array_to_device_array(array_A, device_array_A, number_of_elements);
+	tracker.copy_host_array_to_device_array(array_B, device_array_B, number_of_elements);
+	tracker.copy_host_array_to_device_array(array_C, device_array_C, number_of_elements);
 
 
 	// Launch the Vector Add CUDA Kernel
 	int threadsPerBlock = 256;
 	int blocksPerGrid =(number_of_elements + threadsPerBlock - 1) / threadsPerBlock;
 	printf("CUDA kernel launch with %d blocks of %d threads\n", blocksPerGrid, threadsPerBlock);
-	vectorAdd<float><<<blocksPerGrid, threadsPerBlock>>>(device_array_A, device_array_B, device_array_C, number_of_elements);
+	vectorAdd<int><<<blocksPerGrid, threadsPerBlock>>>(device_array_A, device_array_B, device_array_C, number_of_elements);
 	error = cudaGetLastError();
 
 	if (error != cudaSuccess)
@@ -93,14 +64,14 @@ int main()
 		exit(EXIT_FAILURE);
 	}
 
-	copy_device_array_to_host_array<float>(array_C, device_array_C, number_of_elements);
+	tracker.copy_device_array_to_host_array(array_C, device_array_C, number_of_elements);
 
 	// Verify that the result vector is correct
 	for (int i = 0; i < number_of_elements; ++i)
 	{
 		if (fabs(array_A[i] + array_B[i] - array_C[i]) > 1e-5)
 		{
-			fprintf(stderr, "Result verification failed at element %d!\n", i);
+			std::cout << "ERROR in result." << std::endl;
 			exit(EXIT_FAILURE);
 		}
 	}

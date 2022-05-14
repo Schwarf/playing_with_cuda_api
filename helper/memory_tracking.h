@@ -63,6 +63,31 @@ public:
 
 	}
 
+	void copy_host_array_to_device_array(T * host_memory, T* device_memory, size_t number_of_elements)
+	{
+		cudaError_t error = cudaSuccess;
+		auto size = number_of_elements*sizeof(T);
+		error = cudaMemcpy(device_memory, host_memory, size, cudaMemcpyHostToDevice);
+		if (error != cudaSuccess)
+		{
+			fprintf(stderr, "Failed to copy from host to device (error code %s)!\n", cudaGetErrorString(error));
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	void copy_device_array_to_host_array(T * host_memory, T* device_memory, size_t number_of_elements)
+	{
+		cudaError_t error = cudaSuccess;
+		auto size = number_of_elements*sizeof(T);
+		error = cudaMemcpy(host_memory, device_memory, size, cudaMemcpyDeviceToHost);
+		if (error != cudaSuccess)
+		{
+			fprintf(stderr, "Failed to copy from device to host (error code %s)!\n", cudaGetErrorString(error));
+			exit(EXIT_FAILURE);
+		}
+
+	}
+
 	bool is_device_memory_freed()
 	{
 		return device_memory_hashes_.empty();
