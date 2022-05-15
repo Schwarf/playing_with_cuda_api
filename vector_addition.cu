@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <iostream>
 #include <cuda_runtime.h>
-#include "helper/memory_tracking.h"
+#include "helper/memory_tracker.h"
 #include "algorithms/vector_addition.cuh"
 
 
@@ -16,7 +16,7 @@ int main()
 	std::cout << "Vector addition of "<< number_of_elements << " elements \n";
 
 	// Allocate the host vectors
-	auto tracker = MemoryTracking<int>();
+	auto tracker = MemoryTracker<int>();
 	auto array_A = tracker.allocate_host_memory(number_of_elements);
 	auto array_B = tracker.allocate_host_memory(number_of_elements);
 	auto array_C = tracker.allocate_host_memory(number_of_elements);

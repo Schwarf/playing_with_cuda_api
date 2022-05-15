@@ -2,14 +2,14 @@
 // Created by andreas on 14.05.22.
 //
 
-#ifndef MEMORY_TRACKING_H
-#define MEMORY_TRACKING_H
+#ifndef MEMORY_TRACKER_H
+#define MEMORY_TRACKER_H
 
 #include <unordered_set>
-template <class T> class MemoryTracking
+template <class T> class MemoryTracker
 {
 public:
-	MemoryTracking() =default;
+	MemoryTracker() =default;
 
 	T * allocate_host_memory(size_t number_of_elements)
 	{
@@ -113,4 +113,4 @@ private:
 
 };
 
-#endif //MEMORY_TRACKING_H
+#endif //MEMORY_TRACKER_H
