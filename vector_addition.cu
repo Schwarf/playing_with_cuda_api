@@ -16,7 +16,7 @@ int main()
 	std::cout << "Vector addition of "<< number_of_elements << " elements \n";
 
 	// Allocate the host vectors
-	auto tracker = MemoryTracker<int>();
+	auto tracker = MemoryTracker<float>();
 	auto array_A = tracker.allocate_host_memory(number_of_elements, "array_A");
 	auto array_B = tracker.allocate_host_memory(number_of_elements, "array_B");
 	auto array_C = tracker.allocate_host_memory(number_of_elements, "array_C");
@@ -24,8 +24,8 @@ int main()
 	// Initialize the host input vectors
 	for (int i = 0; i < number_of_elements; ++i)
 	{
-		array_A[i] = rand()/(int)RAND_MAX;
-		array_B[i] = rand()/(int)RAND_MAX;
+		array_A[i] = rand()/(float)RAND_MAX;
+		array_B[i] = rand()/(float)RAND_MAX;
 	}
 
 	auto device_array_A = tracker.allocate_device_memory(number_of_elements, "device_array_A");
@@ -43,7 +43,7 @@ int main()
 	int threadsPerBlock = 256;
 	int blocksPerGrid =(number_of_elements + threadsPerBlock - 1) / threadsPerBlock;
 	printf("CUDA kernel launch with %d blocks of %d threads\n", blocksPerGrid, threadsPerBlock);
-	vectorAdd<int><<<blocksPerGrid, threadsPerBlock>>>(device_array_A, device_array_B, device_array_C, number_of_elements);
+	vectorAdd<float><<<blocksPerGrid, threadsPerBlock>>>(device_array_A, device_array_B, device_array_C, number_of_elements);
 	error = cudaGetLastError();
 
 	if (error != cudaSuccess)

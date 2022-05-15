@@ -1,0 +1,1 @@
+add_library(shared_memory INTERFACE shared_memory_kernels.cuh)
