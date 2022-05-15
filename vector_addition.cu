@@ -17,9 +17,9 @@ int main()
 
 	// Allocate the host vectors
 	auto tracker = MemoryTracker<int>();
-	auto array_A = tracker.allocate_host_memory(number_of_elements);
-	auto array_B = tracker.allocate_host_memory(number_of_elements);
-	auto array_C = tracker.allocate_host_memory(number_of_elements);
+	auto array_A = tracker.allocate_host_memory(number_of_elements, "array_A");
+	auto array_B = tracker.allocate_host_memory(number_of_elements, "array_B");
+	auto array_C = tracker.allocate_host_memory(number_of_elements, "array_C");
 
 	// Initialize the host input vectors
 	for (int i = 0; i < number_of_elements; ++i)
@@ -28,9 +28,9 @@ int main()
 		array_B[i] = rand()/(int)RAND_MAX;
 	}
 
-	auto device_array_A = tracker.allocate_device_memory(number_of_elements);
-	auto device_array_B = tracker.allocate_device_memory(number_of_elements);
-	auto device_array_C = tracker.allocate_device_memory(number_of_elements);
+	auto device_array_A = tracker.allocate_device_memory(number_of_elements, "device_array_A");
+	auto device_array_B = tracker.allocate_device_memory(number_of_elements, "device_array_B");
+	auto device_array_C = tracker.allocate_device_memory(number_of_elements, "device_array_C");
 
 
 	printf("Copy input data from the host memory to the CUDA device\n");
@@ -57,7 +57,7 @@ int main()
 	// Verify that the result vector is correct
 	for (int i = 0; i < number_of_elements; ++i)
 	{
-		if (fabs(array_A[i] + array_B[i] - array_C[i]) > 1e-5 || array_A[i] == 0)
+		if (fabs(array_A[i] + array_B[i] - array_C[i]) > 1e-5)
 		{
 			std::cout << "ERROR in result." << std::endl;
 			exit(EXIT_FAILURE);

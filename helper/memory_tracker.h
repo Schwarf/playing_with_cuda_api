@@ -4,22 +4,22 @@
 
 #ifndef MEMORY_TRACKER_H
 #define MEMORY_TRACKER_H
-
-#include <unordered_set>
+#include <string>
+#include <unordered_map>
 template <class T> class MemoryTracker
 {
 public:
 	MemoryTracker() =default;
 
-	T * allocate_host_memory(size_t number_of_elements)
+	T * allocate_host_memory(size_t number_of_elements, std::string && name)
 	{
 		T * host_memory = new T[number_of_elements];
 
-		host_memory_hashes_.insert(PointerHash<T>()(host_memory));
+		host_memory_hashes_.insert(std::make_pair(PointerHash<T>()(host_memory), name));
 		return host_memory;
 	}
 
-	T * allocate_device_memory(size_t number_of_elements)
+	T * allocate_device_memory(size_t number_of_elements, std::string && name)
 	{
 		cudaError_t error = cudaSuccess;
 		auto size = number_of_elements*sizeof(T);
@@ -27,17 +27,18 @@ public:
 		error = cudaMalloc((void **)&device_memory, size);
 		if (error != cudaSuccess)
 		{
-			fprintf(stderr, "Failed to allocate device memory (error code %s)!\n", cudaGetErrorString(error));
+			std::cerr << "Failed to allocate device memory of '" << name << "'. Error code " << cudaGetErrorString(error) << "\n";
 			exit(EXIT_FAILURE);
 		}
-		device_memory_hashes_.insert(PointerHash<T>()(device_memory));
+		device_memory_hashes_.insert(std::make_pair(PointerHash<T>()(device_memory), name));
 		return device_memory;
 	}
 
 	void free_device_memory(T * device_memory)
 	{
 
-		if(device_memory_hashes_.find(PointerHash<T>()(device_memory)) == device_memory_hashes_.end())
+		auto hash = PointerHash<T>()(device_memory);
+		if(device_memory_hashes_.find(hash) == device_memory_hashes_.end())
 		{
 			std::cout << "Device memory is not registered." << std::endl;
 		}
@@ -45,7 +46,7 @@ public:
 		error = cudaFree(device_memory);
 		if (error != cudaSuccess)
 		{
-			fprintf(stderr, "Failed to free device memory (error code %s)!\n", cudaGetErrorString(error));
+			std::cerr << "Failed to free device memory of '" << device_memory_hashes_[hash] << "'. Error code " << cudaGetErrorString(error) << "\n";
 			exit(EXIT_FAILURE);
 		}
 		device_memory_hashes_.erase(PointerHash<T>()(device_memory));
@@ -70,7 +71,7 @@ public:
 		error = cudaMemcpy(device_memory, host_memory, size, cudaMemcpyHostToDevice);
 		if (error != cudaSuccess)
 		{
-			fprintf(stderr, "Failed to copy from host to device (error code %s)!\n", cudaGetErrorString(error));
+			std::cerr<< "Failed to copy from host to device (error code "  << cudaGetErrorString(error) << ")!\n";
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -82,7 +83,7 @@ public:
 		error = cudaMemcpy(host_memory, device_memory, size, cudaMemcpyDeviceToHost);
 		if (error != cudaSuccess)
 		{
-			fprintf(stderr, "Failed to copy from device to host (error code %s)!\n", cudaGetErrorString(error));
+			std::cerr<< "Failed to copy from host to device (error code "  << cudaGetErrorString(error) << ")!\n";
 			exit(EXIT_FAILURE);
 		}
 
@@ -99,8 +100,8 @@ public:
 	}
 
 private:
-	std::unordered_set<size_t> device_memory_hashes_;
-	std::unordered_set<size_t> host_memory_hashes_;
+	std::unordered_map<size_t, std::string> device_memory_hashes_;
+	std::unordered_map<size_t, std::string> host_memory_hashes_;
 	template <typename U>
 	struct PointerHash
 	{
