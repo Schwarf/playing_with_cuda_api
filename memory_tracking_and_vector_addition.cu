@@ -3,19 +3,7 @@
 #include <iostream>
 #include <cuda_runtime.h>
 #include "helper/memory_tracking.h"
-
-template <typename T>
-__global__ void
-vectorAdd(const T *A, const T *B, T *C, int numElements)
-{
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
-
-	if (i < numElements)
-	{
-		C[i] = A[i] + B[i];
-	}
-}
-
+#include "algorithms/vector_addition.cuh"
 
 
 int main()
@@ -69,7 +57,7 @@ int main()
 	// Verify that the result vector is correct
 	for (int i = 0; i < number_of_elements; ++i)
 	{
-		if (fabs(array_A[i] + array_B[i] - array_C[i]) > 1e-5)
+		if (fabs(array_A[i] + array_B[i] - array_C[i]) > 1e-5 || array_A[i] == 0)
 		{
 			std::cout << "ERROR in result." << std::endl;
 			exit(EXIT_FAILURE);

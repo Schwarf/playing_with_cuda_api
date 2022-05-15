@@ -1,0 +1,1 @@
+add_library(algorithms INTERFACE vector_addition.cuh)
