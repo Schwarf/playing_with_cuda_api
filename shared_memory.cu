@@ -3,7 +3,7 @@
 //
 #include <iostream>
 #include <cuda_runtime.h>
-#include "helper/memory_tracker.h"
+#include "helper/memory_tracker.cuh"
 #include "basics/shared_memory_kernels.cuh"
 
 int main()

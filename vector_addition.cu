@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <iostream>
 #include <cuda_runtime.h>
-#include "helper/memory_tracker.h"
+#include "helper/memory_tracker.cuh"
 #include "algorithms/vector_addition.cuh"
 
 

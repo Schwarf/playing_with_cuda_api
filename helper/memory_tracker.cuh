@@ -2,8 +2,8 @@
 // Created by andreas on 14.05.22.
 //
 
-#ifndef MEMORY_TRACKER_H
-#define MEMORY_TRACKER_H
+#ifndef MEMORY_TRACKER_CUH
+#define MEMORY_TRACKER_CUH
 #include <string>
 #include <unordered_map>
 template <class T> class MemoryTracker
@@ -114,4 +114,4 @@ private:
 
 };
 
-#endif //MEMORY_TRACKER_H
+#endif //MEMORY_TRACKER_CUH
