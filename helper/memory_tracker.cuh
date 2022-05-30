@@ -83,7 +83,7 @@ public:
 		error = cudaMemcpy(host_memory, device_memory, size, cudaMemcpyDeviceToHost);
 		if (error != cudaSuccess)
 		{
-			std::cerr<< "Failed to copy from DEVICE to HOST (error code "  << cudaGetErrorString(error) << ")!\n";
+			std::cerr<< "Failed to copy from DEVICE to HOST (error code " << cudaGetErrorName(error) << " " << cudaGetErrorString(error) << ")!\n";
 			exit(EXIT_FAILURE);
 		}
 
