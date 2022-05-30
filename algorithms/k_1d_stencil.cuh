@@ -26,20 +26,20 @@ kth_stencil(T * input, T * output, int input_size, int k)
 
 	// Fetching into shared memory
 	shared_memory[local_thread_id] = input[global_id];
-	if (local_thread_id < 2 && blockDim.x + global_id < input_size) {
+	if (local_thread_id < 2*k && blockDim.x + global_id < input_size) {
 		shared_memory[blockDim.x + local_thread_id] = input[blockDim.x + global_id];
 	}
 	__syncthreads();
 
-	if(global_id < input_size - 2)
+	T denom = static_cast<T>(2*k + 1);
+	if(global_id < input_size - 2*k)
 	{
-		output[global_id] = (shared_memory[local_thread_id] + shared_memory[local_thread_id + 1] +shared_memory[local_thread_id +2]) /3;
-		//output[global_id] = shared_memory[local_thread_id];
-//		for(int i = 1 ; i < (2*k+1); ++i)
-//		{
-//			output[global_id] = shared_memory[local_thread_id + 1];
-//		}
-//		output[global_id] /= denom;
+		output[global_id] = shared_memory[local_thread_id];
+		for(int i = 1 ; i < (2*k+1); ++i)
+		{
+			output[global_id] += shared_memory[local_thread_id + i];
+		}
+		output[global_id] /= denom;
 	}
 }
 
