@@ -43,6 +43,40 @@ kth_stencil(T * input, T * output, int input_size, int k)
 	}
 }
 
+template <typename T, int k>
+__global__ void
+kth_stencil_warped(T * input, T * output, int input_size)
+{
+	int register_cache[2*k];
+	constexpr int WARP_SIZE = 32;
+	int local_thread_id = threadIdx.x % WARP_SIZE;
+	int start_of_WARP = blockIdx.x * blockDim.x + WARP_SIZE*(threadIdx.x /WARP_SIZE);
+	int global_id = local_thread_id + start_of_WARP;
+
+	if(global_id >= input_size)
+		return;
+	register_cache[0] = input[global_id];
+	if(global_id < 2*k && WARP_SIZE + global_id < input_size)
+	{
+		register_cache[1] = input[WARP_SIZE + global_id];
+	}
+	T denom = static_cast<T>(2*k+1);
+	T accumulated_sum_per_thread{};
+	T shared = register_cache[0];
+	for(int i=0; i < 2*k+1; ++i )
+	{
+		// Threads decide what value will be published in the following access.
+		if (local_thread_id < i)
+			shared = register_cache[1];
+		unsigned mask = __activemask();
+		accumulated_sum_per_thread += __shfl_sync(mask, shared, (local_thread_id + i) % WARP_SIZE);
+	}
+	if (global_id < input_size - 2)
+		output[global_id] = accumulated_sum_per_thread/denom;
+}
+
+
+
 template<typename T>
 T *kth_stencil(T *input, int input_size, int k)
 {
