@@ -30,12 +30,12 @@ static inline T get_random_float(const T &lower_bound, const T &upper_bound, T *
 
 int main()
 {
-	constexpr size_t size = 30;
-	constexpr size_t k = 1;
+	constexpr size_t size = 10000;
+	constexpr size_t k = 10;
 	auto tracker = MemoryTracker<float>();
 	auto host_input = tracker.allocate_host_memory(size, "host_input");
 	auto host_output = tracker.allocate_host_memory(size-2*k, "host_output");
-	get_random_float<float>(0.f, 1.f, host_input, size);
+	get_random_float<float>(0.f, 3.f, host_input, size);
 	auto host_expected_output = kth_stencil(host_input, size, k);
 //	for (int i = 0; i < size - 2 * k; ++i) {
 //		std::cout
@@ -51,6 +51,7 @@ int main()
 	int threadsPerBlock = 1024;
 	int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
 	int needed_shared_memory = (threadsPerBlock + 2) *sizeof(float);
+	//kth_stencil<<<blocksPerGrid, threadsPerBlock, needed_shared_memory>>>(device_input, device_output, size, k);
 	kth_stencil_warped<float, k><<<blocksPerGrid, threadsPerBlock, needed_shared_memory>>>(device_input, device_output, size);
 	auto error = cudaGetLastError();
 

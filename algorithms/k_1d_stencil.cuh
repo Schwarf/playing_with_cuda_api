@@ -4,7 +4,7 @@
 
 #ifndef K_1D_STENCIL_CUH
 #define K_1D_STENCIL_CUH
-#include <stdio.h>
+#include <cstdio>
 #include <iostream>
 
 
@@ -15,12 +15,12 @@ kth_stencil(T * input, T * output, int input_size, int k)
 
 	extern __shared__ T shared_memory[];
 	// id of thread in block
-	int local_thread_id = threadIdx.x;
+	const int local_thread_id = threadIdx.x;
 
 	// first index of output-element by the block
-	int start_of_thread_block = blockIdx.x * blockDim.x;
+	const int start_of_thread_block = blockIdx.x * blockDim.x;
 	// The id of the thread in the scope of the grid
-	int global_id = local_thread_id + start_of_thread_block;
+	const int global_id = local_thread_id + start_of_thread_block;
 
 	if(global_id >= input_size)
 		return;
@@ -49,19 +49,19 @@ __global__ void
 kth_stencil_warped(T * input, T * output, int input_size)
 {
 	T register_cache[2];
-	constexpr int WARP_SIZE = 32;
-	int local_thread_id = threadIdx.x % WARP_SIZE;
-	int start_of_WARP = blockIdx.x * blockDim.x + WARP_SIZE*(threadIdx.x /WARP_SIZE);
-	int global_id = local_thread_id + start_of_WARP;
+
+	const int local_thread_id = threadIdx.x % warpSize;
+	const int start_of_WARP = blockIdx.x * blockDim.x + warpSize*(threadIdx.x /warpSize);
+	const int global_id = local_thread_id + start_of_WARP;
 
 	if(global_id >= input_size)
 		return;
 	register_cache[0] = input[global_id];
-	if(global_id < 2*k && WARP_SIZE + global_id < input_size)
+	if(local_thread_id < 2*k && warpSize + global_id < input_size)
 	{
-		register_cache[1] = input[WARP_SIZE + global_id];
+		register_cache[1] = input[warpSize + global_id];
 	}
-	T denominator = static_cast<T>(2*k+1);
+	const T denominator = static_cast<T>(2*k+1);
 	T accumulated_sum_per_thread{};
 	T shared = register_cache[0];
 	for(int i=0; i < 2*k+1; ++i )
@@ -70,7 +70,7 @@ kth_stencil_warped(T * input, T * output, int input_size)
 		if (local_thread_id < i)
 			shared = register_cache[1];
 		unsigned mask = __activemask();
-		accumulated_sum_per_thread += __shfl_sync(mask, shared, (local_thread_id + i) % WARP_SIZE);
+		accumulated_sum_per_thread += __shfl_sync(mask, shared, (local_thread_id + i) % warpSize);
 	}
 	if (global_id < input_size - 2*k)
 		output[global_id] = accumulated_sum_per_thread/denominator;
