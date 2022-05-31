@@ -1,1 +1,1 @@
-add_library(algorithms INTERFACE vector_addition.cuh k_1d_stencil.cuh)
+add_library(algorithms INTERFACE vector_addition.cuh k_1d_stencil.cuh parallel_reduction_samples.cuh)

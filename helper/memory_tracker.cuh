@@ -6,6 +6,7 @@
 #define MEMORY_TRACKER_CUH
 #include <string>
 #include <unordered_map>
+#include <iostream>
 template <class T> class MemoryTracker
 {
 public:
