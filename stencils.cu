@@ -9,7 +9,7 @@
 #include <cuda_runtime.h>
 
 template<typename T, typename std::enable_if<std::is_integral<T>::value, bool>::type = true>
-static inline T get_random_integral(const T &lower_bound, const T &upper_bound, T *output, int output_size)
+static inline void get_random_integral(const T &lower_bound, const T &upper_bound, T *output, int output_size)
 {
 	static std::mt19937 generator;
 	auto int_distribution = std::uniform_int_distribution<T>(lower_bound, upper_bound);
@@ -19,7 +19,7 @@ static inline T get_random_integral(const T &lower_bound, const T &upper_bound, 
 }
 
 template<typename T, typename std::enable_if<std::is_floating_point<T>::value, bool>::type = true>
-static inline T get_random_float(const T &lower_bound, const T &upper_bound, T *output, int output_size)
+static inline void get_random_float(const T &lower_bound, const T &upper_bound, T *output, int output_size)
 {
 	static std::mt19937 generator;
 	auto real_distribution = std::uniform_real_distribution<T>(lower_bound, upper_bound);
@@ -28,8 +28,10 @@ static inline T get_random_float(const T &lower_bound, const T &upper_bound, T *
 	}
 }
 
+// TODO: The warp solution does not work for k ~ 20. Best guess is that the original "k=1" is only valid for one warp.
 int main()
 {
+
 	constexpr size_t size = 10000;
 	constexpr size_t k = 10;
 	auto tracker = MemoryTracker<float>();
@@ -75,4 +77,5 @@ int main()
 	tracker.free_device_memory(device_input);
 	tracker.free_host_memory(host_output);
 	tracker.free_host_memory(host_input);
+	return 0;
 }
