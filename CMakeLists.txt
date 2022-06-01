@@ -9,6 +9,7 @@ add_executable(shared_memory_basics shared_memory.cu)
 add_executable(stencils stencils.cu )
 add_executable(hello_thread hello_thread.cu)
 add_executable(parallel_reduction parallel_reduction.cu)
+add_executable(simple_print simplePrint.cu)
 
 add_subdirectory(algorithms)
 add_subdirectory(basics)
@@ -18,3 +19,4 @@ set_target_properties(shared_memory_basics PROPERTIES CUDA_SEPARABLE_COMPILATION
 set_target_properties(stencils PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 set_target_properties(hello_thread PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 set_target_properties(parallel_reduction PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+set_target_properties(simple_print PROPERTIES CUDA_SEPARABLE_COMPILATION ON)

@@ -8,7 +8,7 @@
 
 __global__ void hello()
 {
-	printf("Hello Thread! I am a thread %d in block %d\n", threadIdx.x, blockIdx.x);
+	printf("Hello Thread! I am a thread %d in block %d. Block dim is %d\n", threadIdx.x, blockIdx.x, blockDim.x);
 }
 
 int main()

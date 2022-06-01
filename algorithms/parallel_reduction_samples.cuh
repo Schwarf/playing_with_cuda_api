@@ -12,10 +12,7 @@ __global__ void parallel_array_sum_v0(T * input, T* output, int input_size)
 	extern __shared__ T shared_data[];
 	const int thread_id = threadIdx.x;
 	const int data_index = blockIdx.x * blockDim.x + threadIdx.x;
-	if(data_index >= input_size)
-		return;
-
-	shared_data[thread_id] = input[data_index];
+	shared_data[thread_id] = (data_index < input_size) ? input[data_index] : 0;
 	__syncthreads();
 
 	for(int i =1; i < blockDim.x ; i *=2)
