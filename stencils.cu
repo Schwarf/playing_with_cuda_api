@@ -32,8 +32,8 @@ static inline void get_random_float(const T &lower_bound, const T &upper_bound, 
 int main()
 {
 
-	constexpr size_t size = 10000;
-	constexpr size_t k = 10;
+	constexpr size_t size = 100000;
+	constexpr size_t k = 144;
 	auto tracker = MemoryTracker<float>();
 	auto host_input = tracker.allocate_host_memory(size, "host_input");
 	auto host_output = tracker.allocate_host_memory(size-2*k, "host_output");
@@ -52,9 +52,12 @@ int main()
 
 	int threadsPerBlock = 1024;
 	int blocksPerGrid = (size + threadsPerBlock - 1) / threadsPerBlock;
+	std::cout << "blocksPerGrid = " << blocksPerGrid << std::endl;
+
 	int needed_shared_memory = (threadsPerBlock + 2) *sizeof(float);
-	//kth_stencil<<<blocksPerGrid, threadsPerBlock, needed_shared_memory>>>(device_input, device_output, size, k);
-	kth_stencil_warped<float, k><<<blocksPerGrid, threadsPerBlock, needed_shared_memory>>>(device_input, device_output, size);
+	kth_stencil<<<blocksPerGrid, threadsPerBlock, needed_shared_memory>>>(device_input, device_output, size, k);
+	cudaDeviceSynchronize();
+	//kth_stencil_warped<float, k><<<blocksPerGrid, threadsPerBlock, needed_shared_memory>>>(device_input, device_output, size);
 	auto error = cudaGetLastError();
 
 	if (error != cudaSuccess)
@@ -64,18 +67,24 @@ int main()
 	}
 
 	tracker.copy_device_array_to_host_array(host_output, device_output, size-2*k);
-
+	int counter{};
 	for (int i = 0; i < size - 2 * k; ++i) {
 		if(std::fabs(1.f-host_expected_output[i]/host_output[i]) > 0.001f)
 		{
 			std::cout
 				<< i << "  " << host_expected_output[i]/host_output[i] << "  " << host_output[i] << "  " << host_expected_output[i]  << std::endl;
 
+			counter++;
 		}
 	}
+	std::cout << counter << std::endl;
+//	for(int i =0 ; i <= 100; ++i)
+//		std::cout << host_input[i] << ", " ;
+//	std::cout <<"\n" << host_expected_output[0];
 	tracker.free_device_memory(device_output);
 	tracker.free_device_memory(device_input);
 	tracker.free_host_memory(host_output);
 	tracker.free_host_memory(host_input);
+
 	return 0;
 }

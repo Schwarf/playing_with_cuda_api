@@ -45,33 +45,31 @@ kth_stencil(T * input, T * output, int input_size, int k)
 {
 
 	extern __shared__ T shared_memory[];
-	// id of thread in block
-	const int local_thread_id = threadIdx.x;
+	// index of thread in block
+	const int local_thread_index = threadIdx.x;
+	// The index of the thread in the scope of the grid (respecting different blocks)
+	const int global_index = local_thread_index + blockIdx.x * blockDim.x;
 
-	// first index of output-element by the block
-	const int start_of_thread_block = blockIdx.x * blockDim.x;
-	// The id of the thread in the scope of the grid
-	const int global_id = local_thread_id + start_of_thread_block;
-
-	if(global_id >= input_size)
+	if(global_index >= input_size)
 		return;
 
-	// Fetching into shared memory
-	shared_memory[local_thread_id] = input[global_id];
-	if (local_thread_id < 2*k && blockDim.x + global_id < input_size) {
-		shared_memory[blockDim.x + local_thread_id] = input[blockDim.x + global_id];
+	// load parts of the input into local shared memory
+	shared_memory[local_thread_index] = input[global_index];
+	//
+	if (local_thread_index < 2*k && blockDim.x + global_index < input_size) {
+		shared_memory[blockDim.x + local_thread_index] = input[blockDim.x + global_index];
 	}
 	__syncthreads();
 
 	T denominator = static_cast<T>(2*k + 1);
-	if(global_id < input_size - 2*k)
+	if(global_index < input_size)
 	{
-		output[global_id] = shared_memory[local_thread_id];
+		output[global_index] = shared_memory[local_thread_index];
 		for(int i = 1 ; i < (2*k+1); ++i)
 		{
-			output[global_id] += shared_memory[local_thread_id + i];
+			output[global_index] += shared_memory[local_thread_index + i];
 		}
-		output[global_id] /= denominator;
+		output[global_index] /= denominator;
 	}
 }
 
