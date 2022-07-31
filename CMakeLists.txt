@@ -11,6 +11,7 @@ add_executable(hello_thread hello_thread.cu)
 
 add_subdirectory(algorithms)
 add_subdirectory(basics)
+add_subdirectory(random_number_generation)
 
 set_target_properties(vector_addition PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 set_target_properties(shared_memory_basics PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
