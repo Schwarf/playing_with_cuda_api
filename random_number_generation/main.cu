@@ -3,6 +3,7 @@
 //
 
 #include <curand.h>
+#include <stdexcept>
 #include "./../helper/memory_tracker.cuh"
 int main()
 {
@@ -13,6 +14,12 @@ int main()
 	MemoryTracker<float> tracker;
 	auto host_sample = tracker.allocate_host_memory(100, "host_sample");
 	auto device_sample = tracker.allocate_device_memory(100, "device_sample");
-
+	auto error = curandCreateGenerator(&generator, CURAND_RNG_PSEUDO_MT19937);
+	if (error != CURAND_STATUS_SUCCESS)
+	{
+		std::string msg("Could not create pseudo-random number generator: ");
+		msg += error;
+		throw std::runtime_error(msg);
+	}
 	return 0;
 }
