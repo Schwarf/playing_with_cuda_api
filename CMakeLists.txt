@@ -8,12 +8,15 @@ add_executable(vector_addition vector_addition.cu)
 add_executable(shared_memory_basics shared_memory.cu)
 add_executable(stencils stencils.cu )
 add_executable(hello_thread hello_thread.cu)
+add_executable(random random.cu)
 
 add_subdirectory(algorithms)
 add_subdirectory(basics)
-add_subdirectory(random_number_generation)
+
 
 set_target_properties(vector_addition PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 set_target_properties(shared_memory_basics PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 set_target_properties(stencils PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 set_target_properties(hello_thread PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+set_target_properties(random PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+target_link_libraries(random -lcublas -lcurand)
