@@ -7,6 +7,8 @@
 #include <string>
 #include <unordered_map>
 #include <iostream>
+#include "macros.h"
+
 template <class T> class MemoryTracker
 {
 public:
