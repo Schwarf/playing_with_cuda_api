@@ -7,6 +7,7 @@
 #include "helper/memory_tracker.cuh"
 #include "helper/macros.h"
 
+
 int main()
 {
 	int n = 100;
