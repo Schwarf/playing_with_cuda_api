@@ -5,9 +5,10 @@
 #include <curand_kernel.h>
 #include <vector>
 #include <iostream>
+#include "./helper/macros.h"
+#include "./helper/memory_tracker.cuh"
 
-
-#define N 10  // number of trials
+#define N 1000000  // number of trials
 #define DICE 20      // number of the maximum desired value
 
 class Histogram
@@ -48,36 +49,43 @@ __global__ void random_generation_with_ceiling(curandState_t *states, unsigned i
 {
 	unsigned int id = blockIdx.x * blockDim.x + threadIdx.x;
 	numbers[id] = ceilf(curand_uniform(&states[id]) * DICE);
+
 }
 
 
 int main()
 {
 	auto histogram = Histogram(DICE);
-	curandState_t *states;
-	cudaMalloc((void **)&states, N * sizeof(curandState_t));
+
+	auto state_tracker = MemoryTracker<curandState_t>();
+	curandState_t *states = state_tracker.allocate_device_memory(N, "device_curand_states");
+	//cudaMalloc((void **)&states, N * sizeof(curandState_t));
+
 
 	// initialize the random states
-	dim3 blkDim = 1000;
-	dim3 grdDim = (N + blkDim.x - 1) / blkDim.x;
+	dim3 block_dimension = 1000;
+	dim3 grdDim = (N + block_dimension.x - 1) / block_dimension.x;
 	auto seed = time(0);
 	std::cout << "Seed: " << seed <<std::endl;
-	init<<<grdDim, blkDim >>>(seed, states);
+	init<<<grdDim, block_dimension >>>(seed, states);
 
 	// allocate an array of unsigned ints on the CPU and GPU
-	unsigned int host_random_nums[N];
-	unsigned int *device_random_nums;
-	cudaMalloc((void **)&device_random_nums, N * sizeof(unsigned int));
+	auto random_number_tracker = MemoryTracker<unsigned int>();
+	auto host_random_nums = random_number_tracker.allocate_host_memory(N, "host_random_numbers");
+	auto device_random_nums = random_number_tracker.allocate_device_memory(N, "device_random_numbers");
 
 
 	// get random number with ceiling
-	random_generation_with_ceiling<<<grdDim, blkDim >>>(states, device_random_nums);
-	cudaMemcpy(host_random_nums, device_random_nums, N * sizeof(unsigned int), cudaMemcpyDeviceToHost);
+	random_generation_with_ceiling<<<grdDim, block_dimension >>>(states, device_random_nums);
+	random_number_tracker.copy_device_array_to_host_array(host_random_nums, device_random_nums, N);
+
 	printf("Histogram for random numbers generated with ceiling\n");
 	histogram.add_values(host_random_nums, N);
 	histogram.print_result();
-	cudaFree(states);
-	cudaFree(device_random_nums);
+	state_tracker.free_device_memory(states);
+	//cudaFree(device_random_nums);
+	random_number_tracker.free_device_memory(device_random_nums);
+
 
 	return 0;
 }
